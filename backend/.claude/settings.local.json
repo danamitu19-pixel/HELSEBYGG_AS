@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/danie/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/fc3c543f-8032-4b20-be7c-ebf620cbdaca/63863429-e81f-42ea-992b-8f7b35ad6e55/skills/docx/**)",
+      "Bash(extract-text \"C:\\\\Users\\\\danie\\\\Downloads\\\\dokumentasjon\\\\Helsebygg_AS_Dokumentasjon.docx\")",
+      "Bash(pandoc \"C:\\\\Users\\\\danie\\\\Downloads\\\\dokumentasjon\\\\Helsebygg_AS_Dokumentasjon.docx\" -t plain)",
+      "Bash(python -c ' *)"
+    ]
+  }
+}

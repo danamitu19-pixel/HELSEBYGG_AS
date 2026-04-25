@@ -1,0 +1,220 @@
+{
+  "info": {
+    "name": "HELSEBYGG AS - Avvikssystem API",
+    "description": "End-to-end test flow for the HELSEBYGG AS backend.\n\nOrder:\n1. Health\n2. Login (admin) -> auto-saves {{sessionToken}}\n3. Register new user (optional)\n4. Submission-token -> auto-saves {{submissionToken}}\n5. Create report (uses submission token) -> auto-saves {{reportId}}\n6. List / get / update reports (manager/admin)\n7. Create / list / update notes (manager/admin) -> auto-saves {{noteId}}",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",         "value": "http://localhost:3000" },
+    { "key": "sessionToken",    "value": "" },
+    { "key": "submissionToken", "value": "" },
+    { "key": "reportId",        "value": "" },
+    { "key": "noteId",          "value": "" }
+  ],
+  "item": [
+    {
+      "name": "00 Health",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/v1/health"
+      }
+    },
+    {
+      "name": "01 Login (admin or manager)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "if (data.token) {",
+              "  pm.collectionVariables.set('sessionToken', data.token);",
+              "  console.log('Saved sessionToken');",
+              "}",
+              "pm.test('200 and got token', () => {",
+              "  pm.expect(pm.response.code).to.eql(200);",
+              "  pm.expect(data.token).to.be.a('string');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"ingrid\",\n  \"password\": \"TEST-password-123\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/auth/login"
+      }
+    },
+    {
+      "name": "02 Register new user (admin only)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type",  "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{sessionToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"first_name\": \"Test\",\n  \"last_name\":  \"Bruker\",\n  \"email\":      \"test.bruker@helsebygg.no\",\n  \"department\": \"IT\",\n  \"username\":   \"testbruker\",\n  \"password\":   \"Sterkt-Passord-123!\",\n  \"role\":       \"employee\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/auth/register"
+      }
+    },
+    {
+      "name": "03 Request submission token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "if (data.submission_token) {",
+              "  pm.collectionVariables.set('submissionToken', data.submission_token);",
+              "  console.log('Saved submissionToken');",
+              "}",
+              "pm.test('200 and got submission_token', () => {",
+              "  pm.expect(pm.response.code).to.eql(200);",
+              "  pm.expect(data.submission_token).to.be.a('string');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{sessionToken}}" }],
+        "url": "{{baseUrl}}/api/v1/submission-token"
+      }
+    },
+    {
+      "name": "04 Create incident report (anonymous - uses submission token)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "if (data.report_id) {",
+              "  pm.collectionVariables.set('reportId', data.report_id);",
+              "  console.log('Saved reportId =', data.report_id);",
+              "}",
+              "pm.test('201 created', () => pm.expect(pm.response.code).to.eql(201));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type",        "value": "application/json" },
+          { "key": "X-Submission-Token",  "value": "{{submissionToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"category\":    \"medication\",\n  \"severity\":    \"high\",\n  \"description\": \"Test-avvik fra Postman: feilmedisinering på avdeling B.\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/reports"
+      }
+    },
+    {
+      "name": "05 List reports (manager/admin)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{sessionToken}}" }],
+        "url": "{{baseUrl}}/api/v1/reports"
+      }
+    },
+    {
+      "name": "06 Get report by id",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{sessionToken}}" }],
+        "url": "{{baseUrl}}/api/v1/reports/{{reportId}}"
+      }
+    },
+    {
+      "name": "07 Update report status",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type",  "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{sessionToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"in_review\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/reports/{{reportId}}"
+      }
+    },
+    {
+      "name": "08 Create case note",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "if (data.note_id) {",
+              "  pm.collectionVariables.set('noteId', data.note_id);",
+              "  console.log('Saved noteId =', data.note_id);",
+              "}",
+              "pm.test('201 created', () => pm.expect(pm.response.code).to.eql(201));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type",  "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{sessionToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"note_text\": \"Ledelsen ser på saken. Tiltak planlegges.\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/reports/{{reportId}}/notes"
+      }
+    },
+    {
+      "name": "09 List notes on a report",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{sessionToken}}" }],
+        "url": "{{baseUrl}}/api/v1/reports/{{reportId}}/notes"
+      }
+    },
+    {
+      "name": "10 Get note by id",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{sessionToken}}" }],
+        "url": "{{baseUrl}}/api/v1/reports/{{reportId}}/notes/{{noteId}}"
+      }
+    },
+    {
+      "name": "11 Update note",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type",  "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{sessionToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"note_text\": \"Oppdatert: tiltak iverksatt.\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/reports/{{reportId}}/notes/{{noteId}}"
+      }
+    }
+  ]
+}
